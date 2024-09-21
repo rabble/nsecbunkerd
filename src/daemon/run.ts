@@ -226,7 +226,20 @@ class Daemon {
      */
     async startKey(name: string, nsec: string) {
         const cb = signingAuthorizationCallback(name, this.adminInterface);
-        const hexpk = nip19.decode(nsec).data as string;
+        let hexpk: string;
+
+        if (nsec.startsWith('nsec1')) {
+            try {
+                const key = new NDKPrivateKeySigner(nsec);
+                hexpk = key.privateKey!;
+            } catch(e) {
+                console.error(`Error loading key ${name}:`, e);
+                return
+            }
+        } else {
+            hexpk = nsec;
+        }
+        
         const backend = new Backend(this.ndk, this.fastify, hexpk, cb, this.config.baseUrl);
         await backend.start();
     }

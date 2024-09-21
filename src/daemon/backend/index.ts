@@ -1,4 +1,4 @@
-import NDK, { NDKNip46Backend, Nip46PermitCallback } from '@nostr-dev-kit/ndk';
+import NDK, { NDKNip46Backend, NDKPrivateKeySigner, Nip46PermitCallback } from '@nostr-dev-kit/ndk';
 import prisma from '../../db.js';
 import type {FastifyInstance} from "fastify";
 
@@ -13,7 +13,8 @@ export class Backend extends NDKNip46Backend {
         cb: Nip46PermitCallback,
         baseUrl?: string
     ) {
-        super(ndk, key, cb);
+        const signer = new NDKPrivateKeySigner(key);
+        super(ndk, signer, cb);
 
         this.baseUrl = baseUrl;
         this.fastify = fastify;

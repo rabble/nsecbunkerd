@@ -1,5 +1,5 @@
 import "websocket-polyfill";
-import NDK, { NDKKind, NDKPrivateKeySigner, NDKRpcRequest, NDKRpcResponse, NDKUser } from '@nostr-dev-kit/ndk';
+import NDK, { NDKEvent, NDKKind, NDKPrivateKeySigner, NDKRpcRequest, NDKRpcResponse, NDKUser, NostrEvent } from '@nostr-dev-kit/ndk';
 import { NDKNostrRpc } from '@nostr-dev-kit/ndk';
 import createDebug from 'debug';
 import { Key, KeyUser } from '../run';
@@ -121,6 +121,8 @@ class AdminInterface {
             });
 
             this.rpc.on('request', (req) => this.handleRequest(req));
+
+            pingOrDie(this.ndk);
         }).catch((err) => {
             console.log('❌ admin connection failed');
             console.log(err);
@@ -391,6 +393,46 @@ class AdminInterface {
                 console.log('request result', res.result);
         }
     }
+}
+
+async function pingOrDie(ndk: NDK) {
+    let deathTimer: NodeJS.Timeout | null = null;
+    
+    function resetDeath() {
+        if (deathTimer) clearTimeout(deathTimer);
+        deathTimer = setTimeout(() => {
+            console.log(`❌ No ping event received in 30 seconds. Exiting.`);
+            process.exit(1);
+        }, 50000);
+    }
+    
+    const self = await ndk.signer!.user();
+    const sub = ndk.subscribe({
+        authors: [self.pubkey],
+        kinds: [NDKKind.NostrConnect],
+        "#p": [self.pubkey]
+    });
+    sub.on("event", (event: NDKEvent) => {
+        console.log(`🔔 Received ping event:`, event.created_at);
+        resetDeath();
+    });
+    sub.start();
+
+    resetDeath();
+
+    setInterval(() => {
+        const event = new NDKEvent(ndk, {
+            kind: NDKKind.NostrConnect,
+            tags: [ ["p", self.pubkey] ],
+            content: "ping"
+        } as NostrEvent);
+        event.publish().then(() => {
+            console.log(`🔔 Sent ping event:`, event.created_at);
+        }).catch((e: any) => {
+            console.log(`❌ Failed to send ping event:`, e.message);
+            process.exit(1);
+        });
+    }, 20000);
 }
 
 export default AdminInterface;
