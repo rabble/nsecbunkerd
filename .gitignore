@@ -7,3 +7,5 @@ nsecbunker.json
 connection.txt
 config
 .env
+.turbo
+prisma
