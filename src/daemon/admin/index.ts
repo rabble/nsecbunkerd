@@ -33,10 +33,17 @@ export type IAdminOpts = {
 const allowNewKeys = true;
 
 /**
- * This class represents the admin interface for the nsecbunker daemon.
- *
- * It provides an interface for a UI to manage the daemon over nostr.
+ * Admin Interface Implementation
+ * 
+ * This class provides the administrative interface for managing the nsecBunker daemon.
+ * It handles:
+ * - Request validation from admins
+ * - Key management
+ * - Token management
+ * - User management
+ * - Policy enforcement
  */
+
 class AdminInterface {
     private npubs: string[];
     private ndk: NDK;
@@ -162,21 +169,31 @@ class AdminInterface {
         }
     }
 
+    /**
+     * Validates incoming requests to ensure they're from authorized admins
+     * Allows create_account requests if new keys are enabled
+     * @param req - The incoming RPC request
+     */
     private async validateRequest(req: NDKRpcRequest): Promise<void> {
-        // if this request is of type create_account, allow it
-        // TODO: require some POW to prevent spam
+        // Allow create_account requests if enabled
         if (req.method === 'create_account' && allowNewKeys) {
             console.log(`allowing create_account request`);
             return;
         }
 
+        // Validate admin privileges
         if (!await validateRequestFromAdmin(req, this.npubs)) {
             throw new Error('You are not designated to administrate this bunker');
         }
     }
 
     /**
-     * Command to list tokens
+     * Retrieves token information for a specific key
+     * Returns formatted token data including:
+     * - Token status
+     * - Policy information
+     * - User details
+     * @param req - The RPC request containing key name
      */
     private async reqGetKeyTokens(req: NDKRpcRequest) {
         const keyName = req.params[0];
@@ -192,6 +209,7 @@ class AdminInterface {
             },
         });
 
+        // Format and return token data
         const keys = await this.getKeys!();
         const key = keys.find((k) => k.name === keyName);
 
@@ -201,22 +219,20 @@ class AdminInterface {
 
         const npub = key.npub;
 
-        const result = JSON.stringify(tokens.map((t) => {
-            return {
-                id: t.id,
-                key_name: t.keyName,
-                client_name: t.clientName,
-                token: [ npub, t.token ].join('#'),
-                policy_id: t.policyId,
-                policy_name: t.policy?.name,
-                created_at: t.createdAt,
-                updated_at: t.updatedAt,
-                expires_at: t.expiresAt,
-                redeemed_at: t.redeemedAt,
-                redeemed_by: t.KeyUser?.description,
-                time_until_expiration: t.expiresAt ? (t.expiresAt.getTime() - Date.now()) / 1000 : null,
-            };
-        }));
+        const result = JSON.stringify(tokens.map((t) => ({
+            id: t.id,
+            key_name: t.keyName,
+            client_name: t.clientName,
+            token: [ npub, t.token ].join('#'),
+            policy_id: t.policyId,
+            policy_name: t.policy?.name,
+            created_at: t.createdAt,
+            updated_at: t.updatedAt,
+            expires_at: t.expiresAt,
+            redeemed_at: t.redeemedAt,
+            redeemed_by: t.KeyUser?.description,
+            time_until_expiration: t.expiresAt ? (t.expiresAt.getTime() - Date.now()) / 1000 : null,
+        })));
 
         return this.rpc.sendResponse(req.id, req.pubkey, result, 24134);
     }

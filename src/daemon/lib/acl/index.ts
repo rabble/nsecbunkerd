@@ -1,6 +1,17 @@
 import { NDKEvent, NostrEvent } from '@nostr-dev-kit/ndk';
 import prisma from '../../../db.js';
 
+/**
+ * Access Control List Implementation
+ * 
+ * This module handles permission management and request validation.
+ * Features:
+ * - Method-specific permissions
+ * - Event kind filtering
+ * - Token-based access control
+ * - User permission management
+ */
+
 export async function checkIfPubkeyAllowed(
     keyName: string,
     remotePubkey: string,
@@ -74,6 +85,12 @@ export type IAllowScope = {
     kind?: number | 'all';
 };
 
+/**
+ * Converts a request into a signing condition query
+ * Handles special cases for different methods, especially sign_event
+ * @param method - The requested method
+ * @param payload - Optional payload or NostrEvent
+ */
 export function requestToSigningConditionQuery(method: IMethod, payload?: string | NostrEvent) {
     const signingConditionQuery: any = { method };
 
@@ -86,6 +103,12 @@ export function requestToSigningConditionQuery(method: IMethod, payload?: string
     return signingConditionQuery;
 }
 
+/**
+ * Converts an allow scope into a signing condition query
+ * Used for creating new permissions
+ * @param method - The method to allow
+ * @param scope - Optional scope restrictions
+ */
 export function allowScopeToSigningConditionQuery(method: string, scope?: IAllowScope) {
     const signingConditionQuery: any = { method };
 
@@ -96,6 +119,16 @@ export function allowScopeToSigningConditionQuery(method: string, scope?: IAllow
     return signingConditionQuery;
 }
 
+/**
+ * Grants permissions to a key for specific methods
+ * Creates or updates user record and signing conditions
+ * @param remotePubkey - The public key to grant permissions to
+ * @param keyName - The key name to grant permissions for
+ * @param method - The method to allow
+ * @param param - Optional parameters
+ * @param description - Optional user description
+ * @param allowScope - Optional scope restrictions
+ */
 export async function allowAllRequestsFromKey(
     remotePubkey: string,
     keyName: string,
@@ -105,14 +138,14 @@ export async function allowAllRequestsFromKey(
     allowScope?: IAllowScope,
 ): Promise<void> {
     try {
-        // Upsert the KeyUser with the given remotePubkey
+        // Upsert the KeyUser record
         const upsertedUser = await prisma.keyUser.upsert({
             where: { unique_key_user: { keyName, userPubkey: remotePubkey } },
             update: { },
             create: { keyName, userPubkey: remotePubkey, description },
         });
 
-        // Create a new SigningCondition for the given KeyUser and set allowed to true
+        // Create signing condition
         const signingConditionQuery = allowScopeToSigningConditionQuery(method, allowScope);
         await prisma.signingCondition.create({
             data: {

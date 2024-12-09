@@ -12,6 +12,22 @@ import createDebug from "debug";
 
 const debug = createDebug("nsecbunker:createAccount");
 
+/**
+ * Account Creation Command Handler
+ * 
+ * Handles the creation of new user accounts.
+ * Features:
+ * - Key generation
+ * - Initial permissions setup
+ * - Profile creation
+ */
+
+/**
+ * Validates the creation of a new nostr account by checking:
+ * 1. Username is provided
+ * 2. Domain exists in config
+ * 3. Username isn't already taken in the domain's nip05 file
+ */
 export async function validate(currentConfig, username: string, domain: string, email?: string) {
     if (!username) {
         throw new Error('username is required');
@@ -35,6 +51,11 @@ const emptyNip05File = {
     relays: {},
 }
 
+/**
+ * Retrieves the current NIP-05 verification file for a domain
+ * NIP-05 files map usernames to their corresponding nostr public keys
+ * and contain relay information for the domain
+ */
 async function getCurrentNip05File(currentConfig: any, domain: string) {
     try {
         const nip05File = currentConfig.domains[domain].nip05;
@@ -46,7 +67,8 @@ async function getCurrentNip05File(currentConfig: any, domain: string) {
 }
 
 /**
- * Adds an entry to the nip05 file for the domain
+ * Updates the domain's NIP-05 file with a new username->pubkey mapping
+ * Also adds relay information for NIP-46 (Nostr Connect) support
  */
 async function addNip05(currentConfig: IConfig, username: string, domain: string, pubkey: Hexpubkey) {
     const currentNip05s = await getCurrentNip05File(currentConfig, domain);
@@ -99,6 +121,12 @@ async function validateDomain(domain: string | undefined, admin: AdminInterface,
     return domain;
 }
 
+/**
+ * Main entry point for account creation
+ * 1. Validates username and domain
+ * 2. Requests authorization for the creation
+ * 3. If authorized, calls createAccountReal to perform the actual creation
+ */
 export default async function createAccount(admin: AdminInterface, req: NDKRpcRequest) {
     let [ username, domain, email ] = req.params as [ string?, string?, string? ];
 
@@ -136,7 +164,19 @@ export default async function createAccount(admin: AdminInterface, req: NDKRpcRe
 }
 
 /**
- * This is where the real work of creating the private key, wallet, nip-05, granting access, etc happen
+ * Performs the actual account creation after authorization:
+ * 1. Generates a new key pair for the user
+ * 2. Creates and saves NIP-05 verification
+ * 3. Sets up a lightning wallet if configured
+ * 4. Creates initial nostr profile
+ * 5. Saves the private key in the bunker's config
+ * 6. Grants initial permissions to the requesting client
+ * 
+ * @param admin - The admin interface for managing the bunker
+ * @param req - The original RPC request
+ * @param username - Validated username
+ * @param domain - Validated domain
+ * @param email - Optional email for the account
  */
 export async function createAccountReal(
     admin: AdminInterface,
@@ -217,6 +257,13 @@ export async function createAccountReal(
     }
 }
 
+/**
+ * Grants initial permissions to the key that created the account
+ * Allows for:
+ * - Nostr Connect authentication
+ * - Signing events (all kinds)
+ * - Encryption/decryption operations
+ */
 async function grantPermissions(req: NDKRpcRequest, keyName: string) {
     await allowAllRequestsFromKey(req.pubkey, keyName, "connect");
     await allowAllRequestsFromKey(req.pubkey, keyName, "sign_event", undefined, undefined, { kind: 'all' });

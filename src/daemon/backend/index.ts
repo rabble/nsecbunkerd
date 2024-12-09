@@ -2,6 +2,17 @@ import NDK, { NDKNip46Backend, NDKPrivateKeySigner, Nip46PermitCallback } from '
 import prisma from '../../db.js';
 import type {FastifyInstance} from "fastify";
 
+/**
+ * Backend Service Implementation
+ * 
+ * This file implements the core backend functionality for the nsecBunker service.
+ * It handles:
+ * - Token validation and application
+ * - User authentication
+ * - Permission management
+ * - Integration with NDK (Nostr Development Kit)
+ */
+
 export class Backend extends NDKNip46Backend {
     public baseUrl?: string;
     public fastify: FastifyInstance;
@@ -37,17 +48,29 @@ export class Backend extends NDKNip46Backend {
         return tokenRecord;
     }
 
+    /**
+     * Applies a token to a user, setting up their permissions
+     * Flow:
+     * 1. Validates the provided token
+     * 2. Creates or updates user record
+     * 3. Sets up basic connection permissions
+     * 4. Applies policy rules from token
+     * 
+     * @param userPubkey - The user's public key
+     * @param token - The token to apply
+     */
     async applyToken(userPubkey: string, token: string): Promise<void> {
         const tokenRecord = await this.validateToken(token);
         const keyName = tokenRecord.keyName;
 
-        // Upsert the KeyUser with the given remotePubkey
+        // Create or update user record
         const upsertedUser = await prisma.keyUser.upsert({
             where: { unique_key_user: { keyName, userPubkey } },
             update: { },
             create: { keyName, userPubkey, description: tokenRecord.clientName },
         });
 
+        // Set up basic connect permission
         await prisma.signingCondition.create({
             data: {
                 keyUserId: upsertedUser.id,
@@ -56,7 +79,7 @@ export class Backend extends NDKNip46Backend {
             }
         });
 
-        // Go through the rules of this policy and apply them to the user
+        // Apply policy rules
         for (const rule of tokenRecord!.policy!.rules) {
             const signingConditionQuery: any = { method: rule.method };
 
@@ -74,6 +97,7 @@ export class Backend extends NDKNip46Backend {
             });
         }
 
+        // Update token status
         await prisma.token.update({
             where: { id: tokenRecord.id },
             data: {

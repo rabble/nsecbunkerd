@@ -1,3 +1,13 @@
+/**
+ * Authorization and Registration Handler
+ * 
+ * This file handles web-based authorization flows including:
+ * - User authentication via cookies or username/password
+ * - Request validation and processing
+ * - New account registration
+ * - Permission management for nostr keys
+ */
+
 import prisma from "../../db";
 import bcrypt from "bcrypt";
 import { IAllowScope, allowAllRequestsFromKey } from "../lib/acl";
@@ -7,7 +17,9 @@ import { validateRegistration } from "./registration-validations";
 const debug = createDebug("nsecbunker:authorize");
 
 /**
- * TODO: This is still nto being used as no JWT is ever created
+ * Validates a JWT cookie for user authentication
+ * @param request - The incoming request object containing cookies
+ * @returns boolean - True if cookie is valid, false otherwise
  */
 async function validateAuthCookie(request) {
     const cookies = request.cookies || {};
@@ -28,6 +40,12 @@ async function validateAuthCookie(request) {
     return true;
 }
 
+/**
+ * Retrieves and validates a request record from the database
+ * @param request - Request containing the ID parameter
+ * @throws Error if request not found or already processed
+ * @returns The validated request record
+ */
 async function getAndValidateStateOfRequest(request) {
     const record = await prisma.request.findUnique({
         where: { id: request.params.id }
@@ -40,9 +58,13 @@ async function getAndValidateStateOfRequest(request) {
     return record;
 }
 
-
 /**
- * Generates the view to authorize a request
+ * Web handler for displaying the authorization UI
+ * Routes to different templates based on request type:
+ * - create_account -> createAccount template
+ * - other methods -> authorizeRequest template
+ * @param request - The incoming HTTP request
+ * @param reply - The reply object for rendering views
  */
 export async function authorizeRequestWebHandler(request, reply) {
     try {
@@ -71,7 +93,12 @@ export async function authorizeRequestWebHandler(request, reply) {
 }
 
 /**
- * Validates + authenticates a request POSTed to the authorize endpoint
+ * Validates user authentication for a request
+ * Checks either cookie auth or username/password combo
+ * @param request - The incoming request with auth details
+ * @param record - The request record to validate against
+ * @returns The user record if valid
+ * @throws Error if validation fails
  */
 export async function validateRequest(request, record) {
     if (await validateAuthCookie(request)) {
@@ -108,6 +135,16 @@ export async function validateRequest(request, record) {
     return userRecord;
 }
 
+/**
+ * Processes an authorization request after validation
+ * Steps:
+ * 1. Validates request and user credentials
+ * 2. Marks request as allowed
+ * 3. Sets up permissions for the remote pubkey
+ * 4. Adds sign_event capability for connect requests
+ * @param request - The incoming HTTP request
+ * @param reply - The reply object for responses
+ */
 export async function processRequestWebHandler(request, reply) {
     const record = await prisma.request.findUnique({
         where: { id: request.params.id }
@@ -159,6 +196,18 @@ export async function processRequestWebHandler(request, reply) {
     return { ok: true, pubkey: userRecord.pubkey };
 }
 
+/**
+ * Handles new user registration requests
+ * Flow:
+ * 1. Validates registration data
+ * 2. Updates request with allowed status
+ * 3. Waits for key generation
+ * 4. Creates user record
+ * 5. Sets up permissions
+ * 6. Handles redirect if callback URL provided
+ * @param request - The registration request
+ * @param reply - The reply object for responses
+ */
 export async function processRegistrationWebHandler(request, reply) {
     try {
         const record = await getAndValidateStateOfRequest(request);
@@ -250,6 +299,16 @@ export async function processRegistrationWebHandler(request, reply) {
     }
 }
 
+/**
+ * Helper function to create a new user record
+ * Creates a hashed password and stores user details in database
+ * @param username - User's username
+ * @param domain - User's domain
+ * @param pubkey - User's public key
+ * @param email - User's email address
+ * @param password - User's plain text password
+ * @returns The created user record
+ */
 async function createUserRecord(
     username: string,
     domain: string,

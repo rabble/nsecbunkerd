@@ -1,26 +1,37 @@
+/**
+ * Key User Rename Command Handler
+ * 
+ * Manages the renaming of key users.
+ * Features:
+ * - User description updates
+ * - Key association management
+ */
+
 import { NDKRpcRequest } from "@nostr-dev-kit/ndk";
 import AdminInterface from "../index.js";
 import prisma from "../../../db.js";
 
+/**
+ * Updates the description for a key user
+ * @param admin - Admin interface instance
+ * @param req - The RPC request containing new name
+ * @returns Response indicating success
+ */
 export default async function renameKeyUser(admin: AdminInterface, req: NDKRpcRequest) {
-    const [ keyUserPubkey, name ] = req.params as [ string, string ];
+    const [ keyUserId, description ] = req.params as [ string, string ];
 
-    if (!keyUserPubkey || !name) throw new Error("Invalid params");
+    if (!keyUserId || !description) throw new Error("Invalid params");
 
-    const keyUser = await prisma.keyUser.findFirst({
-        where: {
-            userPubkey: keyUserPubkey,
-        }
-    });
+    const keyUserIdInt = parseInt(keyUserId);
+    if (isNaN(keyUserIdInt)) throw new Error("Invalid params");
 
-    if (!keyUser) throw new Error("Key user not found");
-
+    // Update user description
     await prisma.keyUser.update({
         where: {
-            id: keyUser.id,
+            id: keyUserIdInt,
         },
         data: {
-            description: name,
+            description,
         }
     });
 

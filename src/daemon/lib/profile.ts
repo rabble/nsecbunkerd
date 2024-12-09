@@ -1,9 +1,23 @@
+/**
+ * Profile Management Module
+ * 
+ * Handles user profile setup and management.
+ * Features:
+ * - Profile creation
+ * - Relay configuration
+ * - Profile encryption
+ */
+
 import NDK, { NDKEvent, NDKPrivateKeySigner, NostrEvent, type NDKUserProfile } from "@nostr-dev-kit/ndk";
 import * as CryptoJS from 'crypto-js';
 import createDebug from "debug";
 
 const debug = createDebug("nsecbunker:profile");
 
+/**
+ * Default relay list for new profiles
+ * Includes popular and reliable relays
+ */
 const explicitRelayUrls = [
     'wss://purplepag.es',
     'wss://relay.damus.io',

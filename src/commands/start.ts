@@ -113,8 +113,8 @@ async function nip89announcement(configData: IConfig) {
 }
 
 /**
- * This command starts the nsecbunkerd process with an (optional)
- * admin interface over websockets or redis.
+ * Main start command implementation
+ * @param opts Configuration options for starting the daemon
  */
 export async function start(opts: IOpts) {
     const configData = await getCurrentConfig(opts.config);

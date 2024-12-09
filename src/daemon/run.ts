@@ -140,6 +140,18 @@ export default async function run(config: DaemonConfig) {
     await daemon.start();
 }
 
+/**
+ * Daemon Service Runner
+ * 
+ * This class initializes and manages the main nsecBunker daemon process.
+ * Responsibilities:
+ * - Configuration management
+ * - Key management and encryption
+ * - Web server setup
+ * - Admin interface initialization
+ * - Nostr relay connections
+ */
+
 class Daemon {
     private config: DaemonConfig;
     private activeKeys: Record<string, any>;
@@ -147,35 +159,54 @@ class Daemon {
     private ndk: NDK;
     public fastify: FastifyInstance;
 
+    /**
+     * Initialize daemon with configuration
+     * Sets up:
+     * - Admin interface
+     * - Web server (Fastify)
+     * - NDK connection
+     */
     constructor(config: DaemonConfig) {
         this.config = config;
         this.activeKeys = config.keys;
         this.adminInterface = new AdminInterface(config.admin, config.configFile);
 
+        // Set up admin interface methods
         this.adminInterface.getKeys = getKeys(config);
         this.adminInterface.getKeyUsers = getKeyUsers(config);
         this.adminInterface.unlockKey = this.unlockKey.bind(this);
         this.adminInterface.loadNsec = this.loadNsec.bind(this);
 
+        // Initialize web server
         this.fastify = Fastify({ logger: true });
         this.fastify.register(FastifyFormBody);
 
+        // Set up NDK connection
         this.ndk = new NDK({
             explicitRelayUrls: config.nostr.relays,
         });
+        
+        // Set up relay event handlers
         this.ndk.pool.on('relay:connect', (r) => console.log(`✅ Connected to ${r.url}`) );
         this.ndk.pool.on('relay:notice', (n, r) => { console.log(`👀 Notice from ${r.url}`, n); });
-
         this.ndk.pool.on('relay:disconnect', (r) => {
             console.log(`🚫 Disconnected from ${r.url}`);
         });
     }
 
+    /**
+     * Initializes the web authentication server if configured
+     * Sets up routes for:
+     * - Request authorization
+     * - Request processing
+     * - User registration
+     */
     async startWebAuth() {
         if (!this.config.authPort) return;
 
         const urlPrefix = new URL(this.config.baseUrl as string).pathname.replace(/\/+$/, '');
 
+        // Configure view engine
         this.fastify.register(FastifyView, {
             engine: {
                 handlebars: Handlebars,
@@ -185,8 +216,10 @@ class Daemon {
             }
         });
 
+        // Start server
         this.fastify.listen({ port: this.config.authPort, host: this.config.authHost });
 
+        // Set up routes
         this.fastify.get('/requests/:id', authorizeRequestWebHandler);
         this.fastify.post('/requests/:id', processRequestWebHandler);
         this.fastify.post('/register/:id', processRegistrationWebHandler);

@@ -1,9 +1,24 @@
+/**
+ * Wallet management functionality for user accounts.
+ * Handles wallet generation and LN Address creation through LNBits integration.
+ */
+
 import axios from "axios";
 import createDebug from "debug";
 import { IWalletConfig, LNBitsWalletConfig } from "../../../../config";
 
 const debug = createDebug("nsecbunker:wallet");
 
+/**
+ * Generates a wallet based on the provided configuration.
+ * Currently supports LNBits wallet generation.
+ * 
+ * @param walletConfig - Wallet configuration object
+ * @param username - User's username
+ * @param domain - Domain name
+ * @param npub - User's nostr public key
+ * @returns Lightning address in the format username@domain
+ */
 export async function generateWallet(
     walletConfig: IWalletConfig,
     username: string,
@@ -16,6 +31,16 @@ export async function generateWallet(
     }
 }
 
+/**
+ * Creates a new wallet in LNBits for the specified user.
+ * 
+ * @param lnbitsConfig - LNBits-specific configuration
+ * @param username - User's username
+ * @param domain - Domain name
+ * @param npub - User's nostr public key
+ * @returns Lightning address in the format username@domain
+ * @throws Will throw an error if the LNBits API request fails
+ */
 export async function generateLNBitsWallet(
     lnbitsConfig: LNBitsWalletConfig,
     username: string,
@@ -52,6 +77,19 @@ export async function generateLNBitsWallet(
     );
 }
 
+/**
+ * Generates a Lightning Address by registering with a nostdress server.
+ * 
+ * @param username - User's username
+ * @param domain - Domain name
+ * @param userInvoiceKey - LNBits invoice/read key
+ * @param userNpub - User's nostr public key
+ * @param kind - Type of Lightning implementation (e.g., 'lnbits')
+ * @param host - Base URL of the Lightning implementation
+ * @param nostdressUrl - URL of the nostdress server
+ * @returns Lightning address in the format username@domain
+ * @throws Will throw an error if the nostdress API request fails
+ */
 export async function generateLNAddress(
     username: string,
     domain: string,

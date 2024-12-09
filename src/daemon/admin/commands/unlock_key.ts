@@ -1,6 +1,14 @@
 import { NDKRpcRequest } from "@nostr-dev-kit/ndk";
 import AdminInterface from "../index.js";
 
+/**
+ * Handles key unlocking requests for the admin interface.
+ * 
+ * @param {AdminInterface} admin - The admin interface instance handling the request
+ * @param {NDKRpcRequest} req - The RPC request containing the key name and passphrase
+ * @returns {Promise<void>} A promise that resolves when the response is sent
+ * @throws {Error} If params are invalid or unlockKey method is not available
+ */
 export default async function unlockKey(admin: AdminInterface, req: NDKRpcRequest) {
     const [ keyName, passphrase ] = req.params as [ string, string ];
 

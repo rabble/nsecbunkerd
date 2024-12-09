@@ -10,7 +10,14 @@ let baseUrl: string | undefined | null;
 /**
  * Attempts to contact an admin to approve this request.
  *
- * Returns a promise that is resolved with true|false when a response has been received.
+ * @param admin - The admin interface instance to handle authorization
+ * @param keyName - Optional identifier for the key being authorized
+ * @param remotePubkey - The public key of the remote party requesting authorization
+ * @param requestId - Unique identifier for this authorization request
+ * @param method - The method being requested
+ * @param param - Optional parameters for the request, can be a string or NDKEvent
+ * @returns Promise resolving to a string when authorization is complete
+ * @throws Will reject if authorization is denied
  */
 export async function requestAuthorization(
     admin: AdminInterface,
@@ -38,6 +45,17 @@ export async function requestAuthorization(
     });
 }
 
+/**
+ * Handles the authorization flow when communicating directly with an admin
+ *
+ * @param adminInterface - The admin interface instance
+ * @param keyName - Optional identifier for the key being authorized
+ * @param remotePubkey - The public key of the remote party
+ * @param method - The method being requested
+ * @param param - Optional parameters for the request
+ * @param resolve - Promise resolution callback
+ * @param reject - Promise rejection callback
+ */
 async function adminAuthFlow(adminInterface, keyName, remotePubkey, method, param, resolve, reject) {
     const requestedPerm = await adminInterface.requestPermission(keyName, remotePubkey, method, param);
 
@@ -50,6 +68,16 @@ async function adminAuthFlow(adminInterface, keyName, remotePubkey, method, para
     }
 }
 
+/**
+ * Creates a database record for the authorization request
+ *
+ * @param keyName - Optional identifier for the key being authorized
+ * @param requestId - Unique identifier for this authorization request
+ * @param remotePubkey - The public key of the remote party
+ * @param method - The method being requested
+ * @param param - Optional parameters for the request
+ * @returns The created request record
+ */
 async function createRecord(
     keyName: string | undefined,
     requestId: string,
@@ -82,6 +110,17 @@ async function createRecord(
     return request;
 }
 
+/**
+ * Handles the authorization flow when using a web-based approval process
+ *
+ * @param baseUrl - Base URL for the authorization endpoint
+ * @param admin - The admin interface instance
+ * @param remotePubkey - The public key of the remote party
+ * @param requestId - Unique identifier for this authorization request
+ * @param request - The request record from the database
+ * @param resolve - Promise resolution callback
+ * @param reject - Promise rejection callback
+ */
 export function urlAuthFlow(
     baseUrl: string,
     admin: AdminInterface,
@@ -121,6 +160,13 @@ export function urlAuthFlow(
     }, 100);
 }
 
+/**
+ * Generates the URL for a pending authorization request
+ *
+ * @param baseUrl - Base URL for the authorization endpoint
+ * @param request - The request record from the database
+ * @returns The complete URL for the authorization request
+ */
 function generatePendingAuthUrl(baseUrl: string, request: Request): string {
     return [
         baseUrl,
