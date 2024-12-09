@@ -1,3 +1,11 @@
+/**
+ * Command to start the nsecBunker daemon
+ * Handles:
+ * - Loading and decrypting keys
+ * - Publishing NIP-89 announcements for configured domains
+ * - Starting the daemon process with loaded configuration
+ */
+
 import readline from 'readline';
 import { DomainConfig, IConfig, getCurrentConfig, saveCurrentConfig } from '../config/index.js';
 import { decryptNsec } from '../config/keys.js';

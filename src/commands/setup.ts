@@ -1,3 +1,9 @@
+/**
+ * Initial setup command for nsecBunker
+ * Configures the first administrator npub that will have 
+ * remote control access to the bunker
+ */
+
 import readline from 'readline';
 import { getCurrentConfig, saveCurrentConfig } from '../config/index.js';
 

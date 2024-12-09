@@ -1,3 +1,9 @@
+/**
+ * Configuration management for nsecBunker
+ * Handles reading/writing config files and provides type definitions
+ * for the configuration schema
+ */
+
 import { readFileSync, writeFileSync } from 'fs';
 import { NDKPrivateKeySigner, NDKUserProfile } from '@nostr-dev-kit/ndk';
 import { IAdminOpts } from '../daemon/admin';

@@ -1,3 +1,11 @@
+/**
+ * Command to add a new encrypted nsec to the bunker
+ * Handles:
+ * - Prompting for passphrase and nsec
+ * - Encrypting and storing the nsec in config
+ * - Validation of provided nsec format
+ */
+
 import {nip19} from 'nostr-tools';
 import readline from 'readline';
 import { getCurrentConfig, saveCurrentConfig } from '../config/index.js';

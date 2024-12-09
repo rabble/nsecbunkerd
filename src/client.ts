@@ -1,3 +1,14 @@
+/**
+ * CLI client for interacting with nsecBunker
+ * Supports:
+ * - Signing events (NIP-46)
+ * - Creating new accounts
+ * - Managing authorization flows
+ * - Publishing to relays
+ * 
+ * Uses NDK for Nostr protocol interactions
+ */
+
 import "websocket-polyfill";
 import NDK, { NDKUser, NDKEvent, NDKPrivateKeySigner, NDKNip46Signer, NostrEvent } from '@nostr-dev-kit/ndk';
 import fs from 'fs';
